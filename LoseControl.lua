@@ -21,7 +21,6 @@ local Snare   = LOSECONTROL["Snare"]
 local Immune  = LOSECONTROL["Immune"]
 local PvE     = LOSECONTROL["PvE"]
 
-
 local spellIds = {
     -- value is the priority 1 = highest, 100 lowest
 	-- Druid
@@ -73,118 +72,7 @@ local spellIds = {
 	[20549] = CC -- War Stomp
 }
 
-local partyAbilities = {
-	-- value is duration because in TBC group duration can't be tracked
-	-- Druid
-	[8983] = 4, -- Bash
-	[33786] = 6, -- Cyclone
-	[19675] = 4, -- Feral Charge Efect
-	[18658] = 10, -- Hibernate
-	[22570] = 6, -- Maim
-	[27006] = 4, -- Pounce
-	-- Hunter
-	[27753] = 10, -- Freezing Trap
-	[19577] = 3, -- Intimidation
-	[14327] = 10, -- Scare Beast
-	[19503] = 4, -- Scatter Shot
-	[27068] = 10, -- Wyvern Sting; requires a hack to be removed later
-	-- Mage
-	[10230] = 8, -- Frost Nova
-	[12826] = 10, -- Polymorph
-	[33043] = 5, -- Dragon's Breath
-	[18469] = 4, -- Counterspell - Silenced
-	-- Paladin
-	[10308] = 6, -- Hammer of Justice
-	[20066] = 6, -- Repentance
-	-- Priest
-	[10912] = 10, -- Mind Control
-	[10890] = 8, -- Psychic Scream
-	[15487] = 5, -- Silence
-	-- Rogue
-	[1330] = 3, -- Garrote - Silence
-	[2094] = 10, -- Blind
-	[1833] = 4, -- Cheap Shot
-	[38764] = 4.5, -- Gouge
-	[8643] = 6, -- Kidney shot; the debuff is 30621
-	[11297] = 10, -- Sap
-	-- Warlock
-	[27223] = 3, -- Death Coil
-	[6215] = 10, -- Fear
-	[17928] = 8, -- Howl of Terror
-	[6358] = 10, -- Seduction
-	[30414] = 3, -- Shadowfury
-	-- Warrior
-	[7922] = 1, -- Charge Stun
-	[12809] = 5, -- Concussion Blow
-	[25274] = 3, -- Intercept Stun
-	[5246] = 1, -- Intimidating Shout
-	-- other
-	[30217] = 3, -- Adamantite Grenade
-	[30216] = 3, -- Fel Iron Bomb
-	[20549] = 2 -- War Stomp
-}
-
-local drTimers = {
-	["FEAR"] = 0,
-	["CYCLONE/BLIND"] = 0,
-	["STUN"] = 0,
-	["POLYMORPH"] = 0,
-	["ROOT"] = 0,
-	["SLEEP"] = 0,
-	["KIDNEY"] = 0
-	
-}
-
-local drCategories = {
-	["FEAR"] = {
-		[6215] = 10, -- Fear
-		[17928] = 8, -- Howl of Terror
-		[6358] = 10, -- Seduction
-		[10890] = 8, -- Psychic Scream
-		[5246] = 1, -- Intimidating Shout
-		[14327] = 10, -- Scare Beast
-	},
-	["CYCLONE/BLIND"] = {
-		[33786] = 6, -- Cyclone
-		[2094] = 10, -- Blind
-	},
-	["STUN"] = {
-		[1833] = 4, -- Cheap Shot
-		[30217] = 3, -- Adamantite Grenade
-		[30216] = 3, -- Fel Iron Bomb
-		[20549] = 2, -- War Stomp
-		[7922] = 1, -- Charge Stun
-		[12809] = 5, -- Concussion Blow
-		[25274] = 3, -- Intercept Stun
-		[10308] = 6, -- Hammer of Justice
-		[8983] = 4, -- Bash
-		[30414] = 3, -- Shadowfury
-		
-	},
-	["INCAPACITATED"] = {
-		[12826] = 10, -- Polymorph
-		[20066] = 6, -- Repentance
-		[38764] = 4.5, -- Gouge
-		[11297] = 10, -- Sap
-	},
-	["ROOT"] = {
-		[10230] = 8, -- Frost Nova
-	},
-	["SLEEP"] = {
-		[18658] = 10, -- Hibernate
-	},
-	["KIDNEY"] = {
-		[8643] = 6, -- Kidney shot
-	},
-	["NONE"] = {
-		[15487] = 5, -- Silence
-		[18469] = 4, -- Counterspell - Silenced
-	},
-}
-
 local abilities = {} -- localized names are saved here
-local locPartyAbilities = { }
-local locDrCategories = { }
 for k, v in pairs(spellIds) do
 	local name = GetSpellInfo(k)
 	if name then
@@ -192,18 +80,6 @@ for k, v in pairs(spellIds) do
 	else -- Thanks to inph for this idea. Keeps things from breaking when Blizzard changes things.
 		log(L .. " unknown spellId: " .. k)
 	end
-end
--- localize partyabilities + duration
-for k,v in pairs(partyAbilities) do
-		locPartyAbilities[GetSpellInfo(k)] = v
-end
--- localize drcategories
-for k,v in pairs(drCategories) do
-local list = { }
-	for ke, va in pairs(drCategories[k]) do
-		list[GetSpellInfo(ke)] = va
-	end
-locDrCategories[k] = list	
 end
 
 
@@ -251,7 +127,7 @@ local anchors = {
 local DBdefaults = {
 	version = 3.31,
 	noCooldownCount = false,
-	tracking = {
+	tracking = { -- order = priority?
 		CC      = true,
 		Silence = true,
 		Disarm  = true,
@@ -310,6 +186,16 @@ local LoseControlDB -- local reference to the addon settings. this gets initiali
 -- Create the main class
 local LoseControl = CreateFrame("Cooldown", nil, UIParent) -- Exposes the SetCooldown method
 
+LibStub("AceComm-3.0"):Embed(LoseControl)
+function LoseControl:OnCommReceived(prefix, message, dest, sender)
+	local GetTime, expirationTime = strsplit(',', message)
+	for i=1, 5 do
+		if UnitName("party"..i) == sender then
+			self:UNIT_AURA("party"..i, tonumber(GetTime), tonumber(expirationTime))
+		end
+	end
+end
+
 function LoseControl:OnEvent(event, ...) -- functions created in "object:method"-style have an implicit first parameter of "self", which points to object
 	self[event](self, ...) -- route event parameters to LoseControl:event methods
 end
@@ -321,7 +207,15 @@ function LoseControl:ADDON_LOADED(arg1)
 		if _G.LoseControlDB then
 			if _G.LoseControlDB.version < DBdefaults.version then
 				if _G.LoseControlDB.version >= 3.22 then -- minor changes, so try to update without losing settings
-					_G.LoseControlDB.tracking[Immune] = false
+					_G.LoseControlDB.tracking = {
+						Immune  = false, --100
+						CC      = true,  -- 90
+						PvE     = false,  -- 80
+						Silence = true,  -- 70
+						Disarm  = true,  -- 60
+						Root    = true, -- 50
+						Snare   = false, -- 40
+					}
 					_G.LoseControlDB.version = 3.31
 				else -- major changes, must reset settings
 					_G.LoseControlDB = CopyTable(DBdefaults)
@@ -337,6 +231,13 @@ function LoseControl:ADDON_LOADED(arg1)
 	end
 end
 LoseControl:RegisterEvent("ADDON_LOADED")
+
+function LoseControl:PLAYER_TARGET_CHANGED()
+	self:UNIT_AURA("target")
+end
+function LoseControl:PLAYER_FOCUS_CHANGED()
+	self:UNIT_AURA("focus")
+end
 
 -- Initialize a frame's position
 function LoseControl:PLAYER_ENTERING_WORLD() -- this correctly anchors enemy arena frames that aren't created until you zone into an arena
@@ -358,67 +259,19 @@ function LoseControl:PLAYER_ENTERING_WORLD() -- this correctly anchors enemy are
 	--self:SetAlpha(frame.alpha) -- doesn't seem to work; must manually set alpha after the cooldown is displayed, otherwise it doesn't apply.
 end
 
-party1 = CreateFrame("Frame", nil, UIParent)
-party1.dr = CopyTable(drTimers)
-party1.drTimers = CopyTable(drTimers)
-function party1Update(self, elapsed)
-	
-	if party1.drTimers[party1.drCategory] > 15 then
-		party1:SetScript("OnUpdate", nil)
-		party1.drTimers[party1.drCategory] = 0
-		party1.dr[party1.drCategory] = 0
-	end
-	
-	--log(party1.drTimers[party1.drCategory])
-	
-	party1.drTimers[party1.drCategory]=party1.drTimers[party1.drCategory]+elapsed
-end
-
-party2 = CreateFrame("Frame", nil, UIParent)
-party2.dr = CopyTable(drTimers)
-party2.drTimers = CopyTable(drTimers)
-function party2Update(self, elapsed)
-	
-	if party2.drTimers[party2.drCategory] > 15 then
-		party2:SetScript("OnUpdate", nil)
-		party2.drTimers[party2.drCategory] = 0
-		party2.dr[party2.drCategory] = 0
-	end
-	
-	--log(party1.drTimers[party1.drCategory])
-	
-	party2.drTimers[party2.drCategory]=party2.drTimers[party2.drCategory]+elapsed
-end
-
 function LoseControl:COMBAT_LOG_EVENT_UNFILTERED(event , ...)
 local event, sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,spellName = select ( 1 , ... );
 	if (event == "SPELL_AURA_REFRESH" and self.currentSpell == spellName) then
-		if destName == UnitName("player") then
+		--if destName == UnitName("player") then
+		--log(self.unitId)
 			for i = 1, 40 do
-                name, _, icon, _, _, duration, expirationTime = UnitDebuff("player", i)
+                name, _, icon, _, _, duration, expirationTime = UnitDebuff(self.unitId, i)
                 if name==spellName then
                     self:SetCooldown( GetTime(), expirationTime)
+					self:SendCommMessage("LoseControl", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
                 end
             end
-		elseif UnitName("party1") ~= nil then --hacky fix to check if in party
-			if destGUID == UnitGUID("party1") and self.unitName == destName then
-				self:SetCooldown( GetTime(), locPartyAbilities[spellName]/(party1.dr[party1.drCategory]))
-			elseif destGUID == UnitGUID("party2") and self.unitName == destName then
-				self:SetCooldown( GetTime(), locPartyAbilities[spellName]/(party2.dr[party2.drCategory]))
-			elseif destGUID == UnitGUID("party3") and self.unitName == destName then
-				self:SetCooldown( GetTime(), locPartyAbilities[spellName]/(party3.dr[party3.drCategory]))
-			elseif destGUID == UnitGUID("party4") and self.unitName == destName then
-				self:SetCooldown( GetTime(), locPartyAbilities[spellName]/(party4.dr[party4.drCategory]))
-			end
-		end
-	elseif event == "SPELL_AURA_REMOVED" and spellName == self.currentSpell then
-			if destGUID == UnitGUID("party1") and party1.drCategory ~= nil then
-				party1:SetScript("OnUpdate", party1Update)
-				party1.drTimers[party1.drCategory] = 0 -- CC expired, start DR Timer
-			elseif destGUID == UnitGUID("party2") and party2.drCategory ~= nil then
-				party2:SetScript("OnUpdate", party2Update)
-				party2.drTimers[party2.drCategory] = 0 -- CC expired, start DR Timer
-			end
+		--end
 	end		
 end
 
@@ -426,7 +279,7 @@ local WYVERN_STING = GetSpellInfo(19386)
 local UnitDebuff = UnitDebuff
 local UnitBuff = UnitBuff
 -- This is the main event
-function LoseControl:UNIT_AURA(unitId) -- fired when a (de)buff is gained/lost
+function LoseControl:UNIT_AURA(unitId, partyGet, partyExp) -- fired when a (de)buff is gained/lost
 local frame = LoseControlDB.frames[unitId]
 
 	if not (unitId == self.unitId and frame.enabled and self.anchor:IsVisible()) then return end
@@ -434,67 +287,12 @@ local frame = LoseControlDB.frames[unitId]
 		local _, name, icon, Icon, duration, Duration, expirationTime, wyvernsting
 		local currentSpell
 		
-	if (unitId:sub(1, 5) == "party") then -- hack to check if unitId is party1-4
-			for i = 1, 40 do
-				name = select(1, UnitDebuff(unitId, i))
-				if not name then break 
-				elseif locPartyAbilities[name] then
-						Icon = select(3, UnitDebuff(unitId, i))
-						-- party 1
-						if (unitId == "party1") then
-							for k, v in pairs(locDrCategories) do
-								local list = v
-								for ke, va in pairs(list) do
-									if ke == name then
-										if party1.dr[k] == nil or party1.drCategory ~= k then -- unclean obviously, current only 1 DR timer at a time
-											party1.dr[k] = 0
-											party1.drTimers[k] = 0
-										end
-										party1.drCategory = k
-									end
-								end
-							end
-							if party1.dr[party1.drCategory] >= 1 then
-								Duration = locPartyAbilities[name]/(party1.dr[party1.drCategory]*2)
-								maxExpirationTime = locPartyAbilities[name]/(party1.dr[party1.drCategory]*2)
-							else
-								Duration = locPartyAbilities[name]
-								maxExpirationTime = locPartyAbilities[name]
-							end
-							party1:SetScript("OnUpdate", nil)	
-							party1.dr[party1.drCategory] = party1.dr[party1.drCategory] + 1 
-						end
-						-- party 2
-						if (unitId == "party2") then
-							for k, v in pairs(locDrCategories) do
-								local list = v
-								for ke, va in pairs(list) do
-									if ke == name then
-										if party2.dr[k] == nil or party2.drCategory ~= k then -- unclean obviously, current only 1 DR timer at a time
-											party2.dr[k] = 0
-											party2.drTimers[k] = 0
-										end
-										party2.drCategory = k
-									end
-								end
-							end
-							if party2.dr[party2.drCategory] >= 1 then
-								Duration = locPartyAbilities[name]/(party2.dr[party2.drCategory]*2)
-								maxExpirationTime = locPartyAbilities[name]/(party2.dr[party2.drCategory]*2)
-							else
-								Duration = locPartyAbilities[name]
-								maxExpirationTime = locPartyAbilities[name]
-							end
-							party2:SetScript("OnUpdate", nil)	
-							party2.dr[party2.drCategory] = party2.dr[party2.drCategory] + 1 
-						end
-						currentSpell = name
-				end
-			end
-	else
 		for i = 1, 40 do
 			name, _, icon, _, _, duration, expirationTime = UnitDebuff(unitId, i)
-
+			if expirationTime == nil or expirationTime == 0 then
+				expirationTime = partyExp
+				duration = partyExp
+			end
 			if not name then break end -- no more debuffs, terminate the loop
 			--log(i .. ") " .. name .. " | " .. rank .. " | " .. icon .. " | " .. count .. " | " .. debuffType .. " | " .. duration .. " | " .. expirationTime )
 
@@ -541,7 +339,6 @@ local frame = LoseControlDB.frames[unitId]
 				end
 			end
 		end	
-	end
 		if maxExpirationTime == 0 then -- no (de)buffs found
 			self.maxExpirationTime = 0
 			if self.anchor ~= UIParent and self.drawlayer then
@@ -562,17 +359,28 @@ local frame = LoseControlDB.frames[unitId]
 				self.texture:SetTexture(Icon)
 			end
 			self:Show()
+			-- spell might be shorter, so have to renew party cooldown "twice"
+			if partyGet~=nil then
+					self:SetCooldown( partyGet, partyExp)
+			end		
 			if self.maxExpirationTime==nil or self.maxExpirationTime <= maxExpirationTime or self.currentSpell ~= currentSpell then -- only reset cooldown if new (same) spell has longer duration
-				self:SetCooldown( GetTime(), maxExpirationTime)
+				if partyGet~=nil then
+					self:SetCooldown( partyGet, partyExp)
+				else
+					self:SetCooldown( GetTime(), maxExpirationTime)
+				end
 				self.currentSpell=currentSpell
+				if unitId == "player" then
+					self:SendCommMessage("LoseControl", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
+				end
 			end
 			self.maxExpirationTime = maxExpirationTime
 			self.unitName = UnitName(unitId)
+			self.unitId = unitId
 		--	CooldownFrame_SetTimer(self, GetTime(), Duration, 1)
 			self:SetAlpha(frame.alpha) -- hack to apply transparency to the cooldown timer
-		end
+	end
 end
-
 
 local UnitDropDown -- declared here, initialized below in the options panel code
 local AnchorDropDown
@@ -618,12 +426,13 @@ function LoseControl:new(unitId)
 	o:RegisterEvent("PLAYER_ENTERING_WORLD")
 	o:RegisterEvent("UNIT_AURA")
 	o:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	o:RegisterComm("LoseControl")
 	
-	--[[if unitId == "focus" then
+	if unitId == "focus" then
 		o:RegisterEvent("PLAYER_FOCUS_CHANGED")
 	elseif unitId == "target" then
 		o:RegisterEvent("PLAYER_TARGET_CHANGED")
-	end]]
+	end
 	
 	return o
 end
@@ -665,6 +474,8 @@ function Unlock:OnClick()
 			local frame = LoseControlDB.frames[k]
 			if _G[anchors[frame.anchor][k]] or frame.anchor == "None" then -- only unlock frames whose anchor exists
 				v:UnregisterEvent("UNIT_AURA")
+				v:UnregisterEvent("PLAYER_FOCUS_CHANGED")
+				v:UnregisterEvent("PLAYER_TARGET_CHANGED")
 				v:SetMovable(true)
 				v:RegisterForDrag("LeftButton")
 				v:EnableMouse(true)
@@ -684,6 +495,11 @@ function Unlock:OnClick()
 		for k, v in pairs(LC) do
 			local frame = LoseControlDB.frames[k]
 			v:RegisterEvent("UNIT_AURA")	
+			if k == "focus" then
+				v:RegisterEvent("PLAYER_FOCUS_CHANGED")
+			elseif k == "target" then
+				v:RegisterEvent("PLAYER_TARGET_CHANGED")
+			end
 			v:SetMovable(false)
 			v:RegisterForDrag()
 			v:EnableMouse(false)
@@ -763,11 +579,11 @@ local UnitDropDownLabel = OptionsPanel:CreateFontString(O.."UnitDropDownLabel", 
 UnitDropDownLabel:SetText(LOSECONTROL["Unit Configuration"])
 UnitDropDown = CreateFrame("Frame", O.."UnitDropDown", OptionsPanel, "UIDropDownMenuTemplate")
 function UnitDropDown:OnClick()
-	--UIDropDownMenu_SetSelectedValue(UnitDropDown, self.value)
+	UIDropDownMenu_SetSelectedValue(UnitDropDown, this.value)
 	OptionsPanel.refresh() -- easy way to update all the other controls
 end
 UIDropDownMenu_Initialize(UnitDropDown, function() -- sets the initialize function and calls it
-	for _, v in ipairs({ "player" }) do -- indexed manually so they appear in order
+	for _, v in ipairs({ "player", "target", "focus", "party1", "party2", "party3", "party4"}) do -- indexed manually so they appear in order
 		AddItem(UnitDropDown, LOSECONTROL[v], v)
 	end
 end)
@@ -777,13 +593,14 @@ local AnchorDropDownLabel = OptionsPanel:CreateFontString(O.."AnchorDropDownLabe
 AnchorDropDownLabel:SetText(LOSECONTROL["Anchor"])
 AnchorDropDown = CreateFrame("Frame", O.."AnchorDropDown", OptionsPanel, "UIDropDownMenuTemplate")
 function AnchorDropDown:OnClick()
+	UIDropDownMenu_SetSelectedValue(AnchorDropDown, this.value)
+	
 	local unit = UIDropDownMenu_GetSelectedValue(UnitDropDown)
 	local frame = LoseControlDB.frames[unit]
 	local icon = LC[unit]
 
-	UIDropDownMenu_SetSelectedValue(UnitDropDown, "player")
-	frame.anchor = self.value
-	if self.value ~= "None" then -- reset the frame position so it centers on the anchor frame
+	frame.anchor = this.value
+	if this.value ~= "None" then -- reset the frame position so it centers on the anchor frame
 		frame.point = nil
 		frame.relativePoint = nil
 		frame.x = nil
@@ -805,12 +622,13 @@ function AnchorDropDown:OnClick()
 		frame.y or 0
 	)
 end
+
 function AnchorDropDown:initialize() -- called from OptionsPanel.refresh() and every time the drop down menu is opened
 	local unit = UIDropDownMenu_GetSelectedValue(UnitDropDown)
-	AddItem(self, LOSECONTROL["None"], "None")
-	AddItem(self, "Blizzard", "Blizzard")
-	if _G[anchors["Perl"][unit]] then AddItem(self, "Perl", "Perl") end
-	if _G[anchors["XPerl"][unit]] then AddItem(self, "XPerl", "XPerl") end
+	AddItem(AnchorDropDown, LOSECONTROL["None"], "None")
+	AddItem(AnchorDropDown, "Blizzard", "Blizzard")
+	if _G[anchors["Perl"][unit]] then AddItem(AnchorDropDown, "Perl", "Perl") end
+	if _G[anchors["XPerl"][unit]] then AddItem(AnchorDropDown, "XPerl", "XPerl") end
 end
 
 local StrataDropDownLabel = OptionsPanel:CreateFontString(O.."StrataDropDownLabel", "ARTWORK", "GameFontNormal")
@@ -818,13 +636,13 @@ StrataDropDownLabel:SetText(LOSECONTROL["Strata"])
 local StrataDropDown = CreateFrame("Frame", O.."StrataDropDown", OptionsPanel, "UIDropDownMenuTemplate")
 function StrataDropDown:OnClick()
 	local unit = UIDropDownMenu_GetSelectedValue(UnitDropDown)
-	UIDropDownMenu_SetSelectedValue(StrataDropDown, self.value)
-	LoseControlDB.frames[unit].strata = self.value
-	LC[unit]:SetFrameStrata(self.value)
+	UIDropDownMenu_SetSelectedValue(StrataDropDown, this.value)
+	LoseControlDB.frames[unit].strata = this.value
+	LC[unit]:SetFrameStrata(this.value)
 end
 function StrataDropDown:initialize() -- called from OptionsPanel.refresh() and every time the drop down menu is opened
 	for _, v in ipairs({ "HIGH", "MEDIUM", "LOW", "BACKGROUND" }) do -- indexed manually so they appear in order
-		AddItem(self, v, v)
+		AddItem(this, v, v)
 	end
 end
 
@@ -843,18 +661,18 @@ local function CreateSlider(text, parent, low, high, step)
 end
 
 local SizeSlider = CreateSlider(LOSECONTROL["Icon Size"], OptionsPanel, 16, 512, 4)
-SizeSlider:SetScript("OnValueChanged", function(self, value)
+SizeSlider:SetScript("OnValueChanged", function(this, value)
 	local unit = UIDropDownMenu_GetSelectedValue(UnitDropDown)
-	_G[self:GetName() .. "Text"]:SetText(LOSECONTROL["Icon Size"] .. " (" .. value .. "px)")
+	_G[this:GetName() .. "Text"]:SetText(LOSECONTROL["Icon Size"] .. " (" .. value .. "px)")
 	LoseControlDB.frames[unit].size = value
 	LC[unit]:SetWidth(value)
 	LC[unit]:SetHeight(value)
 end)
 
 local AlphaSlider = CreateSlider(LOSECONTROL["Opacity"], OptionsPanel, 0, 100, 5) -- I was going to use a range of 0 to 1 but Blizzard's slider chokes on decimal values
-AlphaSlider:SetScript("OnValueChanged", function(self, value)
+AlphaSlider:SetScript("OnValueChanged", function(this, value)
 	local unit = UIDropDownMenu_GetSelectedValue(UnitDropDown)
-	_G[self:GetName() .. "Text"]:SetText(LOSECONTROL["Opacity"] .. " (" .. value .. "%)")
+	_G[this:GetName() .. "Text"]:SetText(LOSECONTROL["Opacity"] .. " (" .. value .. "%)")
 	LoseControlDB.frames[unit].alpha = value / 100 -- the real alpha value
 	LC[unit]:SetAlpha(value / 100)
 end)
@@ -865,9 +683,7 @@ local Enabled = CreateFrame("CheckButton", O.."Enabled", OptionsPanel, "OptionsC
 _G[O.."EnabledText"]:SetText(LOSECONTROL["Enabled"])
 function Enabled:OnClick()
 	local enabled = self:GetChecked()
-	if LoseControlDB.frames[UIDropDownMenu_GetSelectedValue(UnitDropDown)] ~= nil then
 	LoseControlDB.frames[UIDropDownMenu_GetSelectedValue(UnitDropDown)].enabled = enabled
-	end
 	if enabled then
 		UIDropDownMenu_EnableDropDown(AnchorDropDown)
 		UIDropDownMenu_EnableDropDown(StrataDropDown)
