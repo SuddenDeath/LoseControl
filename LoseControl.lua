@@ -279,6 +279,7 @@ local event, sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spell
                 if name==spellName then
                     self:SetCooldown( GetTime(), expirationTime)
 					self:SendCommMessage("LoseControl_Party", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
+					self:SendCommMessage("LoseControl_Enemy", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
                 end
             end
 		--end
@@ -359,7 +360,7 @@ local frame = LoseControlDB.frames[unitId]
 			if unitId == "player" then
 				self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
 			end
-			self:Hide()
+				self:Hide()
 		elseif maxExpirationTime ~= self.maxExpirationTime then -- this is a different (de)buff, so initialize the cooldown
 			if self.anchor ~= UIParent then
 				self:SetFrameLevel(self.anchor:GetParent():GetFrameLevel()) -- must be dynamic, frame level changes all the time
@@ -384,7 +385,7 @@ local frame = LoseControlDB.frames[unitId]
 					self:SetCooldown( GetTime(), maxExpirationTime)
 					if unitId == "player" then
 						self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
-					elseif unitId == "target" or unitId == "focus" then
+					elseif (unitId == "target" or unitId == "focus") and commGet == nil then
 						self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
 					end
 				end
