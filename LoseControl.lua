@@ -371,6 +371,9 @@ local frame = LoseControlDB.frames[unitId]
 			elseif unitId == "target" or unitId == "focus" then
 				self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
 			end
+			if commGet ~=nil then
+				self:SetCooldown( commGet, commExp)
+			end
 			self:Show()	
 			if self.currentSpell ~= currentSpell or self.maxExpirationTime <= maxExpirationTime then -- only reset cooldown if new (same) spell has longer duration
 				if commGet~=nil then
