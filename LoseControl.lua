@@ -11,7 +11,7 @@ Thanks! :)
 
 local L = "LoseControl"
 local function log(msg) DEFAULT_CHAT_FRAME:AddMessage(msg) end -- alias for convenience
-log("|cffFF7D0ALoseControl|r for WoW 2.4.3 updated by |cff0070DETrucidare|r and Schaka /LC");
+log("|cffFF7D0ALoseControl|r for WoW 2.4.3 updated by Schaka /LC");
 -------------------------------------------------------------------------------
 local CC      = LOSECONTROL["CC"]
 local Silence = LOSECONTROL["Silence"]
@@ -188,10 +188,19 @@ local LoseControl = CreateFrame("Cooldown", nil, UIParent) -- Exposes the SetCoo
 
 LibStub("AceComm-3.0"):Embed(LoseControl)
 function LoseControl:OnCommReceived(prefix, message, dest, sender)
-	local GetTime, expirationTime = strsplit(',', message)
-	for i=1, 5 do
-		if UnitName("party"..i) == sender then
-			self:UNIT_AURA("party"..i, tonumber(GetTime), tonumber(expirationTime))
+	if prefix == "LoseControl_Party" then
+		local GetTime, expirationTime = strsplit(',', message)
+		for i=1, 5 do
+			if UnitName("party"..i) == sender then
+				self:UNIT_AURA("party"..i, tonumber(GetTime), tonumber(expirationTime))
+			end
+		end
+	elseif prefix == "LoseControl_Enemy" then
+		local GetTime, expirationTime, unitName = strsplit(',', message)
+		if unitName == UnitName("target") then
+			self:UNIT_AURA("target", tonumber(GetTime), tonumber(expirationTime))
+		elseif unitName == UnitName("focus") then
+			self:UNIT_AURA("focus", tonumber(GetTime), tonumber(expirationTime))
 		end
 	end
 end
@@ -268,7 +277,7 @@ local event, sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spell
                 name, _, icon, _, _, duration, expirationTime = UnitDebuff(self.unitId, i)
                 if name==spellName then
                     self:SetCooldown( GetTime(), expirationTime)
-					self:SendCommMessage("LoseControl", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
+					self:SendCommMessage("LoseControl_Party", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
                 end
             end
 		--end
@@ -279,7 +288,7 @@ local WYVERN_STING = GetSpellInfo(19386)
 local UnitDebuff = UnitDebuff
 local UnitBuff = UnitBuff
 -- This is the main event
-function LoseControl:UNIT_AURA(unitId, partyGet, partyExp) -- fired when a (de)buff is gained/lost
+function LoseControl:UNIT_AURA(unitId, commGet, commExp) -- fired when a (de)buff is gained/lost
 local frame = LoseControlDB.frames[unitId]
 
 	if not (unitId == self.unitId and frame.enabled and self.anchor:IsVisible()) then return end
@@ -290,8 +299,8 @@ local frame = LoseControlDB.frames[unitId]
 		for i = 1, 40 do
 			name, _, icon, _, _, duration, expirationTime = UnitDebuff(unitId, i)
 			if expirationTime == nil or expirationTime == 0 then
-				expirationTime = partyExp
-				duration = partyExp
+				expirationTime = commExp
+				duration = commExp
 			end
 			if not name then break end -- no more debuffs, terminate the loop
 			--log(i .. ") " .. name .. " | " .. rank .. " | " .. icon .. " | " .. count .. " | " .. debuffType .. " | " .. duration .. " | " .. expirationTime )
@@ -310,7 +319,7 @@ local frame = LoseControlDB.frames[unitId]
 				end
 			end
 			if expirationTime and maxExpirationTime then
-				if LoseControlDB.tracking[abilities[name]] and expirationTime > maxExpirationTime then
+				if LoseControlDB.tracking[abilities[name]] and expirationTime >= maxExpirationTime then
 					maxExpirationTime = expirationTime
 					Duration = duration
 					Icon = icon
@@ -318,7 +327,6 @@ local frame = LoseControlDB.frames[unitId]
 				end
 			end
 		end
-		
 		
 		-- continue hack for Wyvern Sting
 		if self.wyvernsting == 2 and not wyvernsting then -- dot either removed or expired
@@ -358,27 +366,26 @@ local frame = LoseControlDB.frames[unitId]
 			else
 				self.texture:SetTexture(Icon)
 			end
-			self:Show()
-			-- spell might be shorter, so have to renew party cooldown "twice"
-			if partyGet~=nil then
-					self:SetCooldown( partyGet, partyExp)
-			end		
-			if self.maxExpirationTime==nil or self.maxExpirationTime <= maxExpirationTime or self.currentSpell ~= currentSpell then -- only reset cooldown if new (same) spell has longer duration
-				if partyGet~=nil then
-					self:SetCooldown( partyGet, partyExp)
+			if unitId == "player" then
+				self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
+			elseif unitId == "target" or unitId == "focus" then
+				self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
+			end
+			self:Show()	
+			if self.currentSpell ~= currentSpell or self.maxExpirationTime <= maxExpirationTime then -- only reset cooldown if new (same) spell has longer duration
+				if commGet~=nil then
+					self:SetCooldown( commGet, commExp)
 				else
 					self:SetCooldown( GetTime(), maxExpirationTime)
 				end
 				self.currentSpell=currentSpell
-				if unitId == "player" then
-					self:SendCommMessage("LoseControl", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
-				end
 			end
 			self.maxExpirationTime = maxExpirationTime
 			self.unitName = UnitName(unitId)
 			self.unitId = unitId
 		--	CooldownFrame_SetTimer(self, GetTime(), Duration, 1)
-			self:SetAlpha(frame.alpha) -- hack to apply transparency to the cooldown timer
+			self:SetAlpha(frame.alpha) -- hack to apply transparency to the cooldown time
+			
 	end
 end
 
@@ -426,7 +433,8 @@ function LoseControl:new(unitId)
 	o:RegisterEvent("PLAYER_ENTERING_WORLD")
 	o:RegisterEvent("UNIT_AURA")
 	o:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-	o:RegisterComm("LoseControl")
+	o:RegisterComm("LoseControl_Party")
+	o:RegisterComm("LoseControl_Enemy")
 	
 	if unitId == "focus" then
 		o:RegisterEvent("PLAYER_FOCUS_CHANGED")
