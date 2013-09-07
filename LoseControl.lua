@@ -188,6 +188,7 @@ local LoseControl = CreateFrame("Cooldown", nil, UIParent) -- Exposes the SetCoo
 
 LibStub("AceComm-3.0"):Embed(LoseControl)
 function LoseControl:OnCommReceived(prefix, message, dest, sender)
+if sender == UnitName("player") then return end
 	if prefix == "LoseControl_Party" then
 		local GetTime, expirationTime = strsplit(',', message)
 		for i=1, 5 do
@@ -290,7 +291,9 @@ local UnitBuff = UnitBuff
 -- This is the main event
 function LoseControl:UNIT_AURA(unitId, commGet, commExp) -- fired when a (de)buff is gained/lost
 local frame = LoseControlDB.frames[unitId]
-
+	--party CC can't be seen in TBC, not even on bugged private servers
+	--prevent unit_aura from firing outside of AceComm
+	if unitId:sub(1,5) == "party" and commGet == nil then return end
 	if not (unitId == self.unitId and frame.enabled and self.anchor:IsVisible()) then return end
 		local maxExpirationTime = 0
 		local _, name, icon, Icon, duration, Duration, expirationTime, wyvernsting
@@ -352,6 +355,10 @@ local frame = LoseControlDB.frames[unitId]
 			if self.anchor ~= UIParent and self.drawlayer then
 				self.anchor:SetDrawLayer(self.drawlayer) -- restore the original draw layer
 			end
+			-- needed to remove hide icon / basically sending empty UNIT_AURA
+			if unitId == "player" then
+				self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
+			end
 			self:Hide()
 		elseif maxExpirationTime ~= self.maxExpirationTime then -- this is a different (de)buff, so initialize the cooldown
 			if self.anchor ~= UIParent then
@@ -366,11 +373,6 @@ local frame = LoseControlDB.frames[unitId]
 			else
 				self.texture:SetTexture(Icon)
 			end
-			if unitId == "player" then
-				self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
-			elseif unitId == "target" or unitId == "focus" then
-				self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
-			end
 			if commGet ~=nil then
 				self:SetCooldown( commGet, commExp)
 			end
@@ -380,6 +382,11 @@ local frame = LoseControlDB.frames[unitId]
 					self:SetCooldown( commGet, commExp)
 				else
 					self:SetCooldown( GetTime(), maxExpirationTime)
+					if unitId == "player" then
+						self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
+					elseif unitId == "target" or unitId == "focus" then
+						self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
+					end
 				end
 				self.currentSpell=currentSpell
 			end
