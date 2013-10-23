@@ -294,7 +294,7 @@ function LoseControl:UNIT_AURA(unitId, commGet, commExp) -- fired when a (de)buf
 local frame = LoseControlDB.frames[unitId]
 	--party CC can't be seen in TBC, not even on bugged private servers
 	--prevent unit_aura from firing outside of AceComm
-	if unitId:sub(1,5) == "party" and commGet == nil then return end
+	if unitId:sub(1,5) == "party" and commExp == nil then return end
 	if not (unitId == self.unitId and frame.enabled and self.anchor:IsVisible()) then return end
 		local maxExpirationTime = 0
 		local _, name, icon, Icon, duration, Duration, expirationTime, wyvernsting
@@ -375,17 +375,17 @@ local frame = LoseControlDB.frames[unitId]
 				self.texture:SetTexture(Icon)
 			end
 			if commGet ~=nil then
-				self:SetCooldown( commGet, commExp)
+				self:SetCooldown( GetTime(), commExp)
 			end
 			self:Show()	
 			if self.currentSpell ~= currentSpell or self.maxExpirationTime <= maxExpirationTime then -- only reset cooldown if new (same) spell has longer duration
 				if commGet~=nil then
-					self:SetCooldown( commGet, commExp)
+					self:SetCooldown( GetTime(), commExp)
 				else
 					self:SetCooldown( GetTime(), maxExpirationTime)
 					if unitId == "player" then
 						self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
-					elseif (unitId == "target" or unitId == "focus") and commGet == nil then
+					elseif (unitId == "target" or unitId == "focus") and commExp == nil then
 						self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
 					end
 				end
