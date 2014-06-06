@@ -22,54 +22,74 @@ local Immune  = LOSECONTROL["Immune"]
 local PvE     = LOSECONTROL["PvE"]
 
 local spellIds = {
-    -- value is the priority 1 = highest, 100 lowest
 	-- Druid
-	[8983] = CC, -- Bash
-	[33786] = CC, -- Cyclone
-	[19675] = Root, -- Feral Charge Efect
-	[18658] = CC, -- Hibernate
-	[22570] = CC, -- Maim
-	[27006] = CC, -- Pounce
+	[8983] = "CC", -- Bash
+	[33786] = "CC", -- Cyclone
+	[19675] = "Root", -- Feral Charge Efect
+	[18658] = "CC", -- Hibernate
+	[22570] = "CC", -- Maim
+	[27006] = "CC", -- Pounce
 	-- Hunter
-	[27753] = CC, -- Freezing Trap
-	[19577] = CC, -- Intimidation
-	[14327] = CC, -- Scare Beast
-	[19503] = CC, -- Scatter Shot
-	[27068] = CC, -- Wyvern Sting; requires a hack to be removed later
+	[27753] = "CC", -- Freezing Trap
+	[19577] = "CC", -- Intimidation
+	[14327] = "CC", -- Scare Beast
+	[19503] = "CC", -- Scatter Shot
+	[27068] = "CC", -- Wyvern Sting; requires a hack to be removed later
 	-- Mage
-	[10230] = Root, -- Frost Nova
-	[12826] = CC, -- Polymorph
-	[33043] = CC, -- Dragon's Breath
-	[18469] = Silence, -- Counterspell - Silenced
+	[10230] = "Root", -- Frost Nova
+	[12826] = "CC", -- Polymorph
+	[33043] = "CC", -- Dragon's Breath
+	[18469] = "Silence", -- Counterspell - Silenced
 	-- Paladin
-	[10308] = CC, -- Hammer of Justice
-	[20066] = CC, -- Repentance
+	[10308] = "CC", -- Hammer of Justice
+	[20066] = "CC", -- Repentance
 	-- Priest
-	[10912] = CC, -- Mind Control
-	[10890] = CC, -- Psychic Scream
-	[15487] = Silence, -- Silence
+	[10912] = "CC", -- Mind Control
+	[10890] = "CC", -- Psychic Scream
+	[15487] = "Silence", -- Silence
 	-- Rogue
-	[1330] = Silence, -- Garrote - Silence
-	[2094] = CC, -- Blind
-	[1833] = CC, -- Cheap Shot
-	[38764] = CC, -- Gouge
-	[8643] = CC, -- Kidney shot; the buff is 30621
-	[11297] = CC, -- Sap
+	[1330] = "Silence", -- Garrote - Silence
+	[2094] = "CC", -- Blind
+	[1833] = "CC", -- Cheap Shot
+	[38764] = "CC", -- Gouge
+	[8643] = "CC", -- Kidney shot; the buff is 30621
+	[11297] = "CC", -- Sap
 	-- Warlock
-	[27223] = CC, -- Death Coil
-	[6215] = CC, -- Fear
-	[17928] = CC, -- Howl of Terror
-	[6358] = CC, -- Seduction
-	[30414] = CC, -- Shadowfury
+	[27223] = "CC", -- Death Coil
+	[6215] = "CC", -- Fear
+	[17928] = "CC", -- Howl of Terror
+	[6358] = "CC", -- Seduction
+	[30414] = "CC", -- Shadowfury
 	-- Warrior
-	[7922] = CC, -- Charge Stun
-	[12809] = CC, -- Concussion Blow
-	[25274] = CC, -- Intercept Stun
-	[5246] = CC, -- Intimidating Shout
+	[7922] = "CC", -- Charge Stun
+	[12809] = "CC", -- Concussion Blow
+	[25274] = "CC", -- Intercept Stun
+	[5246] = "CC", -- Intimidating Shout
+	[676]   = "Disarm",	-- Disarm
 	-- other
-	[30217] = CC, -- Adamantite Grenade
-	[30216] = CC, -- Fel Iron Bomb
-	[20549] = CC -- War Stomp
+	[30217] = "CC", -- Adamantite Grenade
+	[30216] = "CC", -- Fel Iron Bomb
+	[20549] = "CC", -- War Stomp
+	-- immunities/buffs
+	[642]   = "Immune",	-- Divine Shield (Paladin)
+	[45438] = "Immune",	-- Ice Block (Mage)
+	[34692] = "Immune",	-- The Beast Within (Hunter)
+	[33206] = "Immune", -- Pain Suppression
+	[12292] = "Immune", -- Death Wish
+	[10278] = "Immune", -- Blessing of Protection
+	[31884] = "Immune", -- Avenging Wrath
+	[26669] = "Immune", -- Evasion
+	[11305] = "Immune", -- Sprint
+	[32182] = "Immune", -- Heroism
+	[2825] = "Immune", -- Bloodlust
+	[31224] = "Immune", -- Cloak of Shadows
+	[3411] = "Immune", -- Intervene
+	[20594] = "Immune", -- Stoneform
+	[29166] = "Immune", -- Innervate
+	[16689] = "Immune", -- Nature's Grasp
+	[23920] = "Immune", -- Spell Reflection
+	[1044] = "Immune", -- Blessing of Freedom
+	[6940] = "Immune", -- Blessing of Sacrifice
 }
 
 local abilities = {} -- localized names are saved here
@@ -77,11 +97,10 @@ for k, v in pairs(spellIds) do
 	local name = GetSpellInfo(k)
 	if name then
 		abilities[name] = v
-	else -- Thanks to inph for this idea. Keeps things from breaking when Blizzard changes things.
+	else -- Thanks to inph for this idea.
 		log(L .. " unknown spellId: " .. k)
 	end
 end
-
 
 -------------------------------------------------------------------------------
 -- Global references for attaching icons to various unit frames
@@ -95,7 +114,7 @@ local anchors = {
 		party2 = "PartyMemberFrame2Portrait",
 		party3 = "PartyMemberFrame3Portrait",
 		party4 = "PartyMemberFrame4Portrait",
-		arena1 = "ArenaEnemyFrame1ClassPortrait",
+		arena1 = "ArenaEnemyFrame1ClassPortrait", -- could be replaced by Gladdy eventually or a backport of Arena Unitframes (3.3.5 default UI)
 		arena2 = "ArenaEnemyFrame2ClassPortrait",
 		arena3 = "ArenaEnemyFrame3ClassPortrait",
 		arena4 = "ArenaEnemyFrame4ClassPortrait",
@@ -190,18 +209,11 @@ LibStub("AceComm-3.0"):Embed(LoseControl)
 function LoseControl:OnCommReceived(prefix, message, dest, sender)
 if sender == UnitName("player") then return end
 	if prefix == "LoseControl_Party" then
-		local GetTime, expirationTime = strsplit(',', message)
+		local duration, expirationTime = strsplit(',', message)
 		for i=1, 5 do
 			if UnitName("party"..i) == sender then
-				self:UNIT_AURA("party"..i, tonumber(GetTime), tonumber(expirationTime))
+				self:UNIT_AURA("party"..i, tonumber(duration), tonumber(expirationTime))
 			end
-		end
-	elseif prefix == "LoseControl_Enemy" then
-		local GetTime, expirationTime, unitName = strsplit(',', message)
-		if unitName == UnitName("target") then
-			self:UNIT_AURA("target", tonumber(GetTime), tonumber(expirationTime))
-		elseif unitName == UnitName("focus") then
-			self:UNIT_AURA("focus", tonumber(GetTime), tonumber(expirationTime))
 		end
 	end
 end
@@ -218,7 +230,7 @@ function LoseControl:ADDON_LOADED(arg1)
 			if _G.LoseControlDB.version < DBdefaults.version then
 				if _G.LoseControlDB.version >= 3.22 then -- minor changes, so try to update without losing settings
 					_G.LoseControlDB.tracking = {
-						Immune  = false, --100
+						Immune  = true, --100
 						CC      = true,  -- 90
 						PvE     = false,  -- 80
 						Silence = true,  -- 70
@@ -271,43 +283,50 @@ end
 
 function LoseControl:COMBAT_LOG_EVENT_UNFILTERED(event , ...)
 local event, sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,spellName = select ( 1 , ... );
-	if (event == "SPELL_AURA_REFRESH" and self.currentSpell == spellName) then
-		--if destName == UnitName("player") then
-		--log(self.unitId)
-			for i = 1, 40 do
-                name, _, icon, _, _, duration, expirationTime = UnitDebuff(self.unitId, i)
-                if name==spellName then
-                    self:SetCooldown( GetTime(), expirationTime)
-					self:SendCommMessage("LoseControl_Party", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
-					self:SendCommMessage("LoseControl_Enemy", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
-                end
+	if (event == "SPELL_AURA_REFRESH") then
+		for i = 1, 40 do
+            name, _, icon, _, _, duration, expirationTime = UnitDebuff(self.unitId, i)
+            if name==spellName then
+				self:UNIT_AURA(self.unitId)
+				--self:SendCommMessage("LoseControl_Party", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
+				--self:SendCommMessage("LoseControl_Enemy", GetTime()..","..expirationTime, "PARTY", nil, "ALERT")
             end
-		--end
+		end
 	end		
 end
 
 local WYVERN_STING = GetSpellInfo(19386)
-local UnitDebuff = UnitDebuff
-local UnitBuff = UnitBuff
+
 -- This is the main event
-function LoseControl:UNIT_AURA(unitId, commGet, commExp) -- fired when a (de)buff is gained/lost
+function LoseControl:UNIT_AURA(unitId, commDur, commExp) -- fired when a (de)buff is gained/lost
 local frame = LoseControlDB.frames[unitId]
 	--party CC can't be seen in TBC, not even on bugged private servers
 	--prevent unit_aura from firing outside of AceComm
-	if unitId:sub(1,5) == "party" and commExp == nil then return end
+	--see if we can steal timers from EnemyBuffTimers
 	if not (unitId == self.unitId and frame.enabled and self.anchor:IsVisible()) then return end
 		local maxExpirationTime = 0
 		local _, name, icon, Icon, duration, Duration, expirationTime, wyvernsting
 		local currentSpell
+		local EBFrame
 		
 		for i = 1, 40 do
-			name, _, icon, _, _, duration, expirationTime = UnitDebuff(unitId, i)
-			if expirationTime == nil or expirationTime == 0 then
-				expirationTime = commExp
-				duration = commExp
-			end
+			name, rank, icon, count, debuffType, duration, expirationTime, isMine = UnitDebuff(unitId, i)
 			if not name then break end -- no more debuffs, terminate the loop
-			--log(i .. ") " .. name .. " | " .. rank .. " | " .. icon .. " | " .. count .. " | " .. debuffType .. " | " .. duration .. " | " .. expirationTime )
+			if expirationTime == nil or expirationTime == 0 then
+				if commExp then
+					expirationTime = commExp
+					duration = commDur
+				else
+					-- getting wrong timer sometimes (overwriting?)
+					EBFrame = getglobal(name.."_"..UnitGUID(unitId).."Target")
+					if EBFrame ~=nil and LoseControlDB.tracking[abilities[name]] then
+						--log("found debuff")
+						expirationTime = EBFrame.endTime-(GetTime()-EBFrame.startTime)
+						--log(name.."  "..expirationTime)
+						duration = EBFrame.endTime
+					end
+				end
+			end
 
 			-- exceptions
 			if name == WYVERN_STING then
@@ -331,37 +350,46 @@ local frame = LoseControlDB.frames[unitId]
 				end
 			end
 		end
-		
 		-- continue hack for Wyvern Sting
 		if self.wyvernsting == 2 and not wyvernsting then -- dot either removed or expired
 			self.wyvernsting = nil
 		end
 
 		-- Track Immunities
-		if not Icon and LoseControlDB.tracking[Immune] then -- only bother checking for immunities if there were no debuffs found
+		if not Icon and LoseControlDB.tracking[Immune] and unitId ~= "player" then -- only bother checking for immunities if there were no debuffs found
 			for i = 1, 40 do
-				name, _, icon, _, _, duration, expirationTime = UnitBuff(unitId, i)
-				
-				if not name then break
-				elseif abilities[name] == Immune and expirationTime > maxExpirationTime then
+				name, rank, icon, count, duration, expirationTime, isMine = UnitBuff(unitId, i)
+				if not name then break end
+				if expirationTime == nil or expirationTime == 0 then
+					EBFrame = getglobal(name.."_"..UnitGUID(unitId).."Target")
+					if EBFrame ~=nil and LoseControlDB.tracking[abilities[name]] then
+						--log("found buff")
+						expirationTime = EBFrame.endTime-(GetTime()-EBFrame.startTime)
+						--log(name.."  "..expirationTime)
+						duration = EBFrame.endTime
+					end
+				end
+				if abilities[name] == "Immune" and expirationTime ~= nil and expirationTime >= maxExpirationTime then
 					maxExpirationTime = expirationTime
 					Duration = duration
 					Icon = icon
 					currentSpell = name
 				end
 			end
-		end	
-		if maxExpirationTime == 0 then -- no (de)buffs found
+		end
+		if maxExpirationTime == 0 or maxExpirationTime == nil then -- no (de)buffs found
 			self.maxExpirationTime = 0
+			self.currentSpell = ""
 			if self.anchor ~= UIParent and self.drawlayer then
 				self.anchor:SetDrawLayer(self.drawlayer) -- restore the original draw layer
 			end
 			-- needed to remove hide icon / basically sending empty UNIT_AURA
 			if unitId == "player" then
-				self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
+				self:SendCommMessage("LoseControl_Party", "10"..","..maxExpirationTime, "PARTY", nil, "ALERT")
 			end
 				self:Hide()
 		elseif maxExpirationTime ~= self.maxExpirationTime then -- this is a different (de)buff, so initialize the cooldown
+			self.maxExpirationTime = maxExpirationTime
 			if self.anchor ~= UIParent then
 				self:SetFrameLevel(self.anchor:GetParent():GetFrameLevel()) -- must be dynamic, frame level changes all the time
 				if not self.drawlayer then
@@ -374,29 +402,17 @@ local frame = LoseControlDB.frames[unitId]
 			else
 				self.texture:SetTexture(Icon)
 			end
-			if commGet ~=nil then
-				self:SetCooldown( GetTime(), commExp)
+			if commDur ~=nil then
+				self:SetCooldown( GetTime() - (tonumber(commDur)-commExp), tonumber(commDur))
 			end
 			self:Show()	
-			if self.currentSpell ~= currentSpell or self.maxExpirationTime <= maxExpirationTime then -- only reset cooldown if new (same) spell has longer duration
-				if commGet~=nil then
-					self:SetCooldown( GetTime(), commExp)
-				else
-					self:SetCooldown( GetTime(), maxExpirationTime)
-					if unitId == "player" then
-						self:SendCommMessage("LoseControl_Party", GetTime()..","..maxExpirationTime, "PARTY", nil, "ALERT")
-					elseif (unitId == "target" or unitId == "focus") and commExp == nil then
-						self:SendCommMessage("LoseControl_Enemy", GetTime()..","..maxExpirationTime..","..UnitName(unitId), "PARTY", nil, "ALERT")
-					end
-				end
-				self.currentSpell=currentSpell
+			self:SetCooldown( GetTime() - (Duration-maxExpirationTime), Duration )
+			if unitId == "player" then
+				self:SendCommMessage("LoseControl_Party", Duration..","..maxExpirationTime, "PARTY", nil, "ALERT")					
 			end
-			self.maxExpirationTime = maxExpirationTime
 			self.unitName = UnitName(unitId)
 			self.unitId = unitId
-		--	CooldownFrame_SetTimer(self, GetTime(), Duration, 1)
-			self:SetAlpha(frame.alpha) -- hack to apply transparency to the cooldown time
-			
+			self:SetAlpha(frame.alpha) -- hack to apply transparency to the cooldown time	
 	end
 end
 
